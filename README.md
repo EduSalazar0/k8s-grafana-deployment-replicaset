@@ -26,8 +26,11 @@ Tarea individual. Se despliega **Grafana** (plataforma de visualización y monit
 │   └── 05-replicaset-demo.yml       # ReplicaSet "solo", para comparar con el Deployment
 ├── evidencias/                      # Salidas reales de kubectl de cada prueba
 │   └── capturas/                    # Capturas de pantalla de cada paso (terminal y Grafana)
-└── Informe_Tarea_K8s_Grafana.docx   # Informe de la tarea
+├── Informe_Tarea_K8s_Grafana.docx   # Informe técnico (Word)
+└── Informe_Tarea_K8s_Grafana.pdf    # Informe técnico (PDF)
 ```
+
+El informe técnico completo, con capturas y análisis de cada paso, está en [Informe_Tarea_K8s_Grafana.pdf](Informe_Tarea_K8s_Grafana.pdf).
 
 ![Dashboard de Grafana desplegado en Kubernetes](evidencias/capturas/04-grafana-dashboard.png)
 
@@ -64,13 +67,38 @@ Service NodePort (grafana-svc :30300) → balancea entre los Pods con app=grafan
 - **Probes:** `readinessProbe` (solo recibe tráfico cuando está listo) y `livenessProbe` (se reinicia si se cuelga), ambas contra `/api/health`.
 - **Service NodePort:** expone Grafana en el puerto `30300` del nodo y reparte el tráfico entre las réplicas. Usa `sessionAffinity: ClientIP` porque cada réplica guarda su propia sesión de login.
 
-## Cómo desplegar
+## Cómo ejecutar el proyecto
 
-Requisitos: Docker Desktop encendido, minikube y kubectl.
+### 1. Requisitos
+
+| Herramienta | Versión probada | Instalación |
+|---|---|---|
+| Docker Desktop (encendido) | 29.x | https://docs.docker.com/get-docker/ |
+| minikube | v1.39.0 | https://minikube.sigs.k8s.io/docs/start/ |
+| kubectl | compatible con Kubernetes 1.37 | https://kubernetes.io/docs/tasks/tools/ |
+| Git | cualquiera | https://git-scm.com/ |
+
+Se necesitan unos **2 GB de RAM libres** para el clúster y conexión a internet la primera vez (descarga de la imagen `grafana/grafana`, unos 200 MB).
+
+### 2. Clonar el repositorio
 
 ```bash
-minikube start -p taller
+git clone https://github.com/EduSalazar0/k8s-grafana-deployment-replicaset.git
 ```
+
+```bash
+cd k8s-grafana-deployment-replicaset
+```
+
+### 3. Iniciar el clúster
+
+```bash
+minikube start -p taller --driver=docker
+```
+
+El perfil `taller` se crea solo si no existe. Se puede usar cualquier otro nombre, o el perfil por defecto con `minikube start`. En ese caso hay que quitar `-p taller` de los comandos siguientes.
+
+### 4. Desplegar Grafana
 
 ```bash
 kubectl apply -f grafana/00-namespace.yml -f grafana/01-grafana-secret.yml -f grafana/02-grafana-configmap.yml -f grafana/03-grafana-deployment.yml -f grafana/04-grafana-service.yml
@@ -84,13 +112,118 @@ kubectl -n grafana-lab rollout status deploy/grafana
 kubectl -n grafana-lab get deploy,rs,pods,svc -o wide
 ```
 
-### Acceder a Grafana
+Resultado esperado: `deployment.apps/grafana 3/3`, un ReplicaSet `grafana-68655b84c8` con 3 réplicas listas, 3 Pods `Running` y `service/grafana-svc NodePort 80:30300/TCP`. La primera vez puede tardar 1–2 minutos mientras descarga la imagen.
+
+### 5. Abrir Grafana
 
 ```bash
 minikube service grafana-svc -n grafana-lab -p taller
 ```
 
-En Windows con driver Docker, minikube abre un túnel (`http://127.0.0.1:<puerto>`) y la terminal debe quedar abierta. Al entrar, el dashboard de inicio es **"Tarea K8s - Grafana con Deployment y ReplicaSet"**.
+- **Windows / macOS (driver Docker):** minikube abre un túnel en `http://127.0.0.1:<puerto>` y lanza el navegador. **La terminal debe quedar abierta** mientras se usa Grafana. Los demás comandos se ejecutan en otra terminal.
+- **Linux:** también se puede entrar directo a `http://<minikube ip -p taller>:30300`.
+
+**Credenciales:** usuario `admin`, contraseña `Grafana-Lab-2026` (definidas en [`01-grafana-secret.yml`](grafana/01-grafana-secret.yml)).
+
+Al iniciar sesión se abre el dashboard **"Tarea K8s - Grafana con Deployment y ReplicaSet"**. En *Connections → Data sources* aparece la fuente **TestData**.
+
+### 6. Reproducir las pruebas del informe
+
+Todos los comandos van en una segunda terminal, dentro de la carpeta del repositorio.
+
+**a) Relación Deployment → ReplicaSet → Pod**
+
+```bash
+kubectl -n grafana-lab get rs -o custom-columns=REPLICASET:.metadata.name,DUENO:.metadata.ownerReferences[0].kind,NOMBRE-DUENO:.metadata.ownerReferences[0].name
+```
+
+```bash
+kubectl -n grafana-lab get pods -o custom-columns=POD:.metadata.name,DUENO:.metadata.ownerReferences[0].kind,NOMBRE-DUENO:.metadata.ownerReferences[0].name
+```
+
+**b) Autorreparación.** Se borra un Pod (el nombre sale de `get pods`) y el ReplicaSet crea otro:
+
+```bash
+kubectl -n grafana-lab get pods
+```
+
+```bash
+kubectl -n grafana-lab delete pod <nombre-de-un-pod>
+```
+
+```bash
+kubectl -n grafana-lab get pods
+```
+
+**c) Escalado**
+
+```bash
+kubectl -n grafana-lab scale deploy grafana --replicas=5
+```
+
+```bash
+kubectl -n grafana-lab get deploy,rs,pods
+```
+
+```bash
+kubectl -n grafana-lab scale deploy grafana --replicas=3
+```
+
+**d) Actualización continua (RollingUpdate)**
+
+```bash
+kubectl -n grafana-lab set image deploy/grafana grafana=grafana/grafana:12.0.0
+```
+
+```bash
+kubectl -n grafana-lab rollout status deploy/grafana
+```
+
+```bash
+kubectl -n grafana-lab get rs -o wide
+```
+
+```bash
+kubectl -n grafana-lab rollout history deploy/grafana
+```
+
+**e) Rollback.** El *Warning* sobre `kubectl apply` que aparece es informativo:
+
+```bash
+kubectl -n grafana-lab rollout undo deploy/grafana
+```
+
+```bash
+kubectl -n grafana-lab get rs -o wide
+```
+
+**f) ReplicaSet sin Deployment.** La plantilla cambia a 12.0.0, pero los Pods siguen en 11.6.0:
+
+```bash
+kubectl apply -f grafana/05-replicaset-demo.yml
+```
+
+```bash
+kubectl -n grafana-lab set image rs/grafana-rs-demo grafana=grafana/grafana:12.0.0
+```
+
+```bash
+kubectl -n grafana-lab get pods -l app=grafana-rs-demo -o custom-columns=POD:.metadata.name,IMAGEN:.spec.containers[0].image
+```
+
+```bash
+kubectl delete -f grafana/05-replicaset-demo.yml
+```
+
+### Solución de problemas
+
+| Problema | Causa / solución |
+|---|---|
+| `Unable to connect to the server ... localhost:8080` | El clúster está apagado: ejecutar `minikube start -p taller`. |
+| `failed to connect to the docker API` | Docker Desktop no está encendido. |
+| Pods en `ContainerCreating` o `0/1` por varios minutos | Se está descargando la imagen o Grafana aún arranca; esperar con `kubectl -n grafana-lab rollout status deploy/grafana`. |
+| `http://192.168.49.2:30300` no abre en Windows/macOS | Con el driver Docker el nodo no es accesible directamente; usar `minikube service ...` y dejar la terminal abierta. |
+| Grafana pide iniciar sesión otra vez después de un rollout | Es esperado: cada réplica guarda su sesión localmente y los Pods nuevos no la conocen. |
 
 ## Pruebas realizadas
 
@@ -132,4 +265,10 @@ kubectl delete namespace grafana-lab
 
 ```bash
 minikube stop -p taller
+```
+
+Para borrar por completo el clúster de prueba:
+
+```bash
+minikube delete -p taller
 ```
