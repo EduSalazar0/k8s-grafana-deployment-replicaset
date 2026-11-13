@@ -1,0 +1,31 @@
+﻿PS> kubectl get nodes -o wide
+NAME     STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION                              CONTAINER-RUNTIME
+taller   Ready    control-plane   46h   v1.37.0   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   6.18.58.1-microsoft-standard-WSL2 (amd64)   containerd://2.3.4
+
+PS> kubectl get ns grafana-lab --show-labels
+NAME          STATUS   AGE     LABELS
+grafana-lab   Active   2m35s   kubernetes.io/metadata.name=grafana-lab,plataforma=grafana,proyecto=tarea-k8s
+
+PS> kubectl -n grafana-lab get deploy,rs,pods,svc -o wide
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                   SELECTOR
+deployment.apps/grafana   3/3     3            3           39s   grafana      grafana/grafana:11.6.0   app=grafana
+
+NAME                                 DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES                   SELECTOR
+replicaset.apps/grafana-68655b84c8   3         3         3       39s   grafana      grafana/grafana:11.6.0   app=grafana,pod-template-hash=68655b84c8
+
+NAME                           READY   STATUS    RESTARTS   AGE   IP           NODE     NOMINATED NODE   READINESS GATES
+pod/grafana-68655b84c8-8m9wn   1/1     Running   0          39s   10.244.0.7   taller   <none>           <none>
+pod/grafana-68655b84c8-q7ghm   1/1     Running   0          39s   10.244.0.8   taller   <none>           <none>
+pod/grafana-68655b84c8-xz8dc   1/1     Running   0          39s   10.244.0.9   taller   <none>           <none>
+
+NAME                  TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+service/grafana-svc   NodePort   10.99.148.149   <none>        80:30300/TCP   2m35s   app=grafana
+
+PS> kubectl -n grafana-lab get secret,configmap
+NAME                   TYPE     DATA   AGE
+secret/grafana-admin   Opaque   2      2m35s
+
+NAME                             DATA   AGE
+configmap/grafana-provisioning   3      2m36s
+configmap/kube-root-ca.crt       1      2m36s
+

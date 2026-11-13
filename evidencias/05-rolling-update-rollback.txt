@@ -1,0 +1,86 @@
+﻿PS> kubectl -n grafana-lab set image deploy/grafana grafana=grafana/grafana:12.0.0
+deployment.apps/grafana image updated
+
+PS> kubectl -n grafana-lab annotate deploy/grafana kubernetes.io/change-cause='Actualizacion a grafana/grafana:12.0.0' --overwrite
+deployment.apps/grafana annotated
+
+PS> kubectl -n grafana-lab rollout status deploy/grafana --timeout=420s
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+deployment "grafana" successfully rolled out
+
+PS> kubectl -n grafana-lab get rs -o wide
+NAME                 DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES                   SELECTOR
+grafana-65694bfc6c   3         3         3       80s     grafana      grafana/grafana:12.0.0   app=grafana,pod-template-hash=65694bfc6c
+grafana-68655b84c8   0         0         0       3m20s   grafana      grafana/grafana:11.6.0   app=grafana,pod-template-hash=68655b84c8
+
+PS> kubectl -n grafana-lab get pods -l app=grafana -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image,STATUS:.status.phase
+POD                        IMAGE                    STATUS
+grafana-65694bfc6c-5zzgb   grafana/grafana:12.0.0   Running
+grafana-65694bfc6c-c6qbv   grafana/grafana:12.0.0   Running
+grafana-65694bfc6c-nnlpk   grafana/grafana:12.0.0   Running
+grafana-68655b84c8-q7ghm   grafana/grafana:11.6.0   Succeeded
+
+PS> kubectl -n grafana-lab rollout history deploy/grafana
+deployment.apps/grafana 
+REVISION  CHANGE-CAUSE
+1         Despliegue inicial grafana/grafana:11.6.0
+2         Actualizacion a grafana/grafana:12.0.0
+
+PS> kubectl -n grafana-lab describe deploy grafana | Select-String -Pattern 'ScalingReplicaSet'
+
+  Normal  ScalingReplicaSet  3m21s  deployment-controller  Scaled up replica set grafana-68655b84c8 from 0 to 3
+  Normal  ScalingReplicaSet  2m14s  deployment-controller  Scaled up replica set grafana-68655b84c8 from 3 to 5
+  Normal  ScalingReplicaSet  111s   deployment-controller  Scaled down replica set grafana-68655b84c8 from 5 to 2
+  Normal  ScalingReplicaSet  106s   deployment-controller  Scaled up replica set grafana-68655b84c8 from 2 to 3
+  Normal  ScalingReplicaSet  81s    deployment-controller  Scaled up replica set grafana-65694bfc6c from 0 to 1
+  Normal  ScalingReplicaSet  37s    deployment-controller  Scaled down replica set grafana-68655b84c8 from 3 to 2
+  Normal  ScalingReplicaSet  37s    deployment-controller  Scaled up replica set grafana-65694bfc6c from 1 to 2
+  Normal  ScalingReplicaSet  20s    deployment-controller  Scaled down replica set grafana-68655b84c8 from 2 to 1
+  Normal  ScalingReplicaSet  20s    deployment-controller  Scaled up replica set grafana-65694bfc6c from 2 to 3
+  Normal  ScalingReplicaSet  2s     deployment-controller  (combined from similar events): Scaled down replica set grafana-68655b84c8 from 1 to 0
+
+PS> kubectl -n grafana-lab rollout undo deploy/grafana
+Warning: resource deployments/grafana was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected 
+behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/grafana rolled back
+
+PS> kubectl -n grafana-lab rollout status deploy/grafana --timeout=420s
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "grafana" rollout to finish: 1 old replicas are pending termination...
+deployment "grafana" successfully rolled out
+
+PS> kubectl -n grafana-lab get rs -o wide
+NAME                 DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES                   SELECTOR
+grafana-65694bfc6c   0         0         0       2m12s   grafana      grafana/grafana:12.0.0   app=grafana,pod-template-hash=65694bfc6c
+grafana-68655b84c8   3         3         3       4m12s   grafana      grafana/grafana:11.6.0   app=grafana,pod-template-hash=68655b84c8
+
+PS> kubectl -n grafana-lab get pods -l app=grafana -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image,STATUS:.status.phase
+POD                        IMAGE                    STATUS
+grafana-65694bfc6c-nnlpk   grafana/grafana:12.0.0   Succeeded
+grafana-68655b84c8-68f7g   grafana/grafana:11.6.0   Running
+grafana-68655b84c8-l96j6   grafana/grafana:11.6.0   Running
+grafana-68655b84c8-mfq2z   grafana/grafana:11.6.0   Running
+
+PS> kubectl -n grafana-lab rollout history deploy/grafana
+deployment.apps/grafana 
+REVISION  CHANGE-CAUSE
+2         Actualizacion a grafana/grafana:12.0.0
+3         Despliegue inicial grafana/grafana:11.6.0
+

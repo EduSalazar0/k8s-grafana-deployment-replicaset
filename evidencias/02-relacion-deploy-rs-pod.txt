@@ -1,0 +1,72 @@
+﻿PS> kubectl -n grafana-lab describe deploy grafana
+Name:                   grafana
+Namespace:              grafana-lab
+CreationTimestamp:      Thu, 12 Nov 2026 19:52:24 -0500
+Labels:                 app=grafana
+Annotations:            deployment.kubernetes.io/revision: 1
+                        kubernetes.io/change-cause: Despliegue inicial grafana/grafana:11.6.0
+Selector:               app=grafana
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  0 max unavailable, 1 max surge
+Pod Template:
+  Labels:  app=grafana
+           tier=monitoring
+  Containers:
+   grafana:
+    Image:      grafana/grafana:11.6.0
+    Port:       3000/TCP (http)
+    Host Port:  0/TCP (http)
+    Limits:
+      cpu:     500m
+      memory:  512Mi
+    Requests:
+      cpu:      100m
+      memory:   128Mi
+    Liveness:   http-get http://:http/api/health delay=30s timeout=1s period=10s successThreshold=1 failureThreshold=3
+    Readiness:  http-get http://:http/api/health delay=10s timeout=1s period=5s successThreshold=1 failureThreshold=3
+    Environment:
+      GF_SECURITY_ADMIN_USER:                     <set to the key 'admin-user' in secret 'grafana-admin'>      Optional: false
+      GF_SECURITY_ADMIN_PASSWORD:                 <set to the key 'admin-password' in secret 'grafana-admin'>  Optional: false
+      GF_USERS_ALLOW_SIGN_UP:                     false
+      GF_PLUGINS_PREINSTALL_DISABLED:             true
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH:  /var/lib/grafana/dashboards/tarea-k8s.json
+    Mounts:
+      /etc/grafana/provisioning/dashboards/dashboards.yaml from provisioning (rw,path="dashboards.yaml")
+      /etc/grafana/provisioning/datasources/datasources.yaml from provisioning (rw,path="datasources.yaml")
+      /var/lib/grafana from data (rw)
+      /var/lib/grafana/dashboards/tarea-k8s.json from provisioning (rw,path="tarea-k8s.json")
+  Volumes:
+   provisioning:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      grafana-provisioning
+    Optional:  false
+   data:
+    Type:          EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:        
+    SizeLimit:     <unset>
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   grafana-68655b84c8 (3/3 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  40s   deployment-controller  Scaled up replica set grafana-68655b84c8 from 0 to 3
+
+PS> kubectl -n grafana-lab get rs -o custom-columns=REPLICASET:.metadata.name,OWNER-KIND:.metadata.ownerReferences[0].kind,OWNER:.metadata.ownerReferences[0].name,DESIRED:.spec.replicas,READY:.status.readyReplicas
+REPLICASET           OWNER-KIND   OWNER     DESIRED   READY
+grafana-68655b84c8   Deployment   grafana   3         3
+
+PS> kubectl -n grafana-lab get pods -o custom-columns=POD:.metadata.name,OWNER-KIND:.metadata.ownerReferences[0].kind,OWNER:.metadata.ownerReferences[0].name,IP:.status.podIP,STATUS:.status.phase
+POD                        OWNER-KIND   OWNER                IP           STATUS
+grafana-68655b84c8-8m9wn   ReplicaSet   grafana-68655b84c8   10.244.0.7   Running
+grafana-68655b84c8-q7ghm   ReplicaSet   grafana-68655b84c8   10.244.0.8   Running
+grafana-68655b84c8-xz8dc   ReplicaSet   grafana-68655b84c8   10.244.0.9   Running
+

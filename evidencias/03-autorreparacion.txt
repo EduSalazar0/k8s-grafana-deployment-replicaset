@@ -1,0 +1,33 @@
+﻿PS> kubectl -n grafana-lab get pods -l app=grafana
+NAME                       READY   STATUS    RESTARTS   AGE
+grafana-68655b84c8-8m9wn   1/1     Running   0          49s
+grafana-68655b84c8-q7ghm   1/1     Running   0          49s
+grafana-68655b84c8-xz8dc   1/1     Running   0          49s
+
+PS> kubectl -n grafana-lab delete pod grafana-68655b84c8-8m9wn --wait=false
+pod "grafana-68655b84c8-8m9wn" deleted from grafana-lab namespace
+
+PS> Start-Sleep 2; kubectl -n grafana-lab get pods -l app=grafana
+NAME                       READY   STATUS    RESTARTS   AGE
+grafana-68655b84c8-g67b2   0/1     Running   0          2s
+grafana-68655b84c8-q7ghm   1/1     Running   0          52s
+grafana-68655b84c8-xz8dc   1/1     Running   0          52s
+
+PS> kubectl -n grafana-lab wait --for=condition=Ready pod -l app=grafana --timeout=180s
+pod/grafana-68655b84c8-g67b2 condition met
+pod/grafana-68655b84c8-q7ghm condition met
+pod/grafana-68655b84c8-xz8dc condition met
+
+PS> kubectl -n grafana-lab get pods -l app=grafana
+NAME                       READY   STATUS    RESTARTS   AGE
+grafana-68655b84c8-g67b2   1/1     Running   0          16s
+grafana-68655b84c8-q7ghm   1/1     Running   0          66s
+grafana-68655b84c8-xz8dc   1/1     Running   0          66s
+
+PS> kubectl -n grafana-lab describe rs | Select-String -Pattern 'SuccessfulCreate|SuccessfulDelete'
+
+  Normal  SuccessfulCreate  67s   replicaset-controller  Created pod: grafana-68655b84c8-xz8dc
+  Normal  SuccessfulCreate  66s   replicaset-controller  Created pod: grafana-68655b84c8-8m9wn
+  Normal  SuccessfulCreate  66s   replicaset-controller  Created pod: grafana-68655b84c8-q7ghm
+  Normal  SuccessfulCreate  17s   replicaset-controller  Created pod: grafana-68655b84c8-g67b2
+

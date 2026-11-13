@@ -1,0 +1,22 @@
+# Service tipo NodePort: expone Grafana fuera del clúster.
+# Balancea el tráfico entre TODOS los Pods con la etiqueta app=grafana,
+# sin importar qué ReplicaSet los haya creado.
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-svc
+  namespace: grafana-lab
+  labels:
+    app: grafana
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  # Cada réplica guarda su propia sesión de login (SQLite local), así que
+  # fijamos al cliente siempre al mismo Pod para que el login no "rebote".
+  sessionAffinity: ClientIP
+  ports:
+    - name: http
+      port: 80            # Puerto del Service dentro del clúster
+      targetPort: 3000    # Puerto del contenedor Grafana
+      nodePort: 30300     # Puerto fijo en el nodo (rango 30000-32767)

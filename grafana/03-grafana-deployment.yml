@@ -1,0 +1,91 @@
+# Deployment de Grafana.
+# El Deployment NO crea los Pods directamente: crea un ReplicaSet, y es el
+# ReplicaSet quien se encarga de mantener siempre "replicas" Pods vivos.
+# Cuando cambia la plantilla (por ejemplo, la versión de la imagen), el
+# Deployment crea un ReplicaSet NUEVO y va moviendo los Pods (RollingUpdate).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: grafana-lab
+  labels:
+    app: grafana
+  annotations:
+    kubernetes.io/change-cause: "Despliegue inicial grafana/grafana:11.6.0"
+spec:
+  replicas: 3                     # Número de Pods que debe mantener el ReplicaSet
+  revisionHistoryLimit: 5         # ReplicaSets antiguos que se guardan para rollback
+  selector:
+    matchLabels:
+      app: grafana                # El ReplicaSet "adopta" los Pods con esta etiqueta
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                 # Máximo 1 Pod extra durante la actualización
+      maxUnavailable: 0           # Nunca bajar de 3 Pods disponibles (cero caída)
+  template:                       # Plantilla de los Pods que creará el ReplicaSet
+    metadata:
+      labels:
+        app: grafana
+        tier: monitoring
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.6.0
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-password
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_PLUGINS_PREINSTALL_DISABLED   # No descargar plugins extra al arrancar
+              value: "true"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: /var/lib/grafana/dashboards/tarea-k8s.json
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:           # El Pod recibe tráfico solo cuando está listo
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:            # Si deja de responder, Kubernetes lo reinicia
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+              subPath: datasources.yaml
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+            - name: provisioning
+              mountPath: /var/lib/grafana/dashboards/tarea-k8s.json
+              subPath: tarea-k8s.json
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: provisioning
+          configMap:
+            name: grafana-provisioning
+        - name: data
+          emptyDir: {}

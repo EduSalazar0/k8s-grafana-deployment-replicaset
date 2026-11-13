@@ -1,0 +1,9 @@
+# Namespace dedicado para aislar todos los recursos de Grafana
+# del resto del clúster (por ejemplo, del Pod nginx de clase).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana-lab
+  labels:
+    proyecto: tarea-k8s
+    plataforma: grafana

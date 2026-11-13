@@ -1,0 +1,50 @@
+﻿PS> kubectl -n grafana-lab scale deploy grafana --replicas=5
+deployment.apps/grafana scaled
+
+PS> kubectl -n grafana-lab rollout status deploy/grafana --timeout=240s
+Waiting for deployment "grafana" rollout to finish: 3 of 5 updated replicas are available...
+Waiting for deployment "grafana" rollout to finish: 4 of 5 updated replicas are available...
+deployment "grafana" successfully rolled out
+
+PS> kubectl -n grafana-lab get deploy,rs,pods -l app=grafana
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/grafana   5/5     5            5           90s
+
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/grafana-68655b84c8   5         5         5       90s
+
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/grafana-68655b84c8-g67b2   1/1     Running   0          40s
+pod/grafana-68655b84c8-kfclg   1/1     Running   0          23s
+pod/grafana-68655b84c8-m5f98   1/1     Running   0          23s
+pod/grafana-68655b84c8-q7ghm   1/1     Running   0          90s
+pod/grafana-68655b84c8-xz8dc   1/1     Running   0          90s
+
+PS> kubectl -n grafana-lab scale deploy grafana --replicas=2
+deployment.apps/grafana scaled
+
+PS> Start-Sleep 5; kubectl -n grafana-lab get deploy,rs,pods -l app=grafana
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/grafana   2/2     2            2           95s
+
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/grafana-68655b84c8   2         2         2       95s
+
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/grafana-68655b84c8-q7ghm   1/1     Running   0          95s
+pod/grafana-68655b84c8-xz8dc   1/1     Running   0          95s
+
+PS> kubectl -n grafana-lab scale deploy grafana --replicas=3
+deployment.apps/grafana scaled
+
+PS> kubectl -n grafana-lab rollout status deploy/grafana --timeout=240s
+Waiting for deployment "grafana" rollout to finish: 2 of 3 updated replicas are available...
+deployment "grafana" successfully rolled out
+
+PS> kubectl -n grafana-lab get deploy,rs
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/grafana   3/3     3            3           112s
+
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/grafana-68655b84c8   3         3         3       112s
+

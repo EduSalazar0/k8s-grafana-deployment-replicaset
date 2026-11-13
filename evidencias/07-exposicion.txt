@@ -1,0 +1,18 @@
+﻿PS> kubectl -n grafana-lab get svc grafana-svc -o wide
+NAME          TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+grafana-svc   NodePort   10.99.148.149   <none>        80:30300/TCP   6m46s   app=grafana
+
+PS> kubectl -n grafana-lab get endpointslices -l kubernetes.io/service-name=grafana-svc
+NAME                ADDRESSTYPE   PORTS   ENDPOINTS                             AGE
+grafana-svc-7sjxr   IPv4          3000    10.244.0.17,10.244.0.18,10.244.0.19   6m46s
+
+PS> minikube ip -p taller
+192.168.49.2
+
+PS> minikube service list -p taller -n grafana-lab
+┌─────────────┬─────────────┬─────────────┬─────┐
+│  NAMESPACE  │    NAME     │ TARGET PORT │ URL │
+├─────────────┼─────────────┼─────────────┼─────┤
+│ grafana-lab │ grafana-svc │ http/80     │     │
+└─────────────┴─────────────┴─────────────┴─────┘
+

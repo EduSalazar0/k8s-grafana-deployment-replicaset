@@ -1,0 +1,75 @@
+# Configuración declarativa (provisioning) de Grafana:
+#  - Un datasource "TestData" (datos de prueba integrados en Grafana).
+#  - Un proveedor de dashboards que carga el dashboard de la tarea.
+# Así TODAS las réplicas del Deployment arrancan con la misma configuración.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: grafana-lab
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: TestData
+        type: grafana-testdata-datasource
+        uid: testdata
+        access: proxy
+        isDefault: true
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: tarea-k8s
+        folder: Tarea Kubernetes
+        type: file
+        disableDeletion: true
+        options:
+          path: /var/lib/grafana/dashboards
+  tarea-k8s.json: |
+    {
+      "uid": "tarea-k8s",
+      "title": "Tarea K8s - Grafana con Deployment y ReplicaSet",
+      "timezone": "browser",
+      "refresh": "10s",
+      "time": { "from": "now-30m", "to": "now" },
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "type": "text",
+          "title": "Acerca de este despliegue",
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+          "options": {
+            "mode": "markdown",
+            "content": "### Grafana desplegado en Kubernetes (minikube)\n- **Namespace:** `grafana-lab`\n- **Deployment:** `grafana` (3 réplicas, RollingUpdate)\n- **ReplicaSet:** creado y gestionado automáticamente por el Deployment\n- **Service:** `grafana-svc` tipo **NodePort 30300**\n- **Configuración:** Secret (credenciales) + ConfigMap (datasource y este dashboard)"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Peticiones por segundo (simulado)",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+          "targets": [
+            { "refId": "A", "scenarioId": "random_walk", "seriesCount": 3 }
+          ]
+        },
+        {
+          "type": "gauge",
+          "title": "Uso de CPU (simulado)",
+          "gridPos": { "h": 9, "w": 6, "x": 12, "y": 6 },
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
+          "targets": [
+            { "refId": "A", "scenarioId": "random_walk", "min": 0, "max": 100, "startValue": 40 }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Réplicas deseadas",
+          "gridPos": { "h": 9, "w": 6, "x": 18, "y": 6 },
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "testdata" },
+          "targets": [
+            { "refId": "A", "scenarioId": "csv_metric_values", "stringInput": "3,3,3", "alias": "replicas" }
+          ]
+        }
+      ]
+    }

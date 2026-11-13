@@ -1,0 +1,43 @@
+﻿PS> kubectl apply -f grafana/05-replicaset-demo.yml
+replicaset.apps/grafana-rs-demo created
+
+PS> kubectl -n grafana-lab wait --for=condition=Ready pod -l app=grafana-rs-demo --timeout=180s
+pod/grafana-rs-demo-pjxlx condition met
+pod/grafana-rs-demo-zb8vc condition met
+
+PS> kubectl -n grafana-lab get rs grafana-rs-demo -o custom-columns=REPLICASET:.metadata.name,OWNER:.metadata.ownerReferences[0].kind,DESIRED:.spec.replicas,READY:.status.readyReplicas
+REPLICASET        OWNER    DESIRED   READY
+grafana-rs-demo   <none>   2         2
+
+PS> kubectl -n grafana-lab get pods -l app=grafana-rs-demo -o custom-columns=POD:.metadata.name,OWNER:.metadata.ownerReferences[0].name,IMAGE:.spec.containers[0].image
+POD                     OWNER             IMAGE
+grafana-rs-demo-pjxlx   grafana-rs-demo   grafana/grafana:11.6.0
+grafana-rs-demo-zb8vc   grafana-rs-demo   grafana/grafana:11.6.0
+
+PS> kubectl -n grafana-lab delete pod -l app=grafana-rs-demo --wait=false
+pod "grafana-rs-demo-pjxlx" deleted from grafana-lab namespace
+pod "grafana-rs-demo-zb8vc" deleted from grafana-lab namespace
+
+PS> Start-Sleep 3; kubectl -n grafana-lab get pods -l app=grafana-rs-demo
+NAME                    READY   STATUS    RESTARTS   AGE
+grafana-rs-demo-8pnq9   1/1     Running   0          4s
+grafana-rs-demo-d4qjd   1/1     Running   0          4s
+
+PS> kubectl -n grafana-lab set image rs/grafana-rs-demo grafana=grafana/grafana:12.0.0
+replicaset.apps/grafana-rs-demo image updated
+
+PS> Start-Sleep 5; kubectl -n grafana-lab get rs grafana-rs-demo -o wide
+NAME              DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES                   SELECTOR
+grafana-rs-demo   2         2         2       12s   grafana      grafana/grafana:12.0.0   app=grafana-rs-demo
+
+PS> kubectl -n grafana-lab get pods -l app=grafana-rs-demo -o custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image,STATUS:.status.phase
+POD                     IMAGE                    STATUS
+grafana-rs-demo-8pnq9   grafana/grafana:11.6.0   Running
+grafana-rs-demo-d4qjd   grafana/grafana:11.6.0   Running
+
+PS> kubectl -n grafana-lab rollout history rs/grafana-rs-demo
+error: no history viewer has been implemented for "ReplicaSet.apps"
+
+PS> kubectl delete -f grafana/05-replicaset-demo.yml
+replicaset.apps "grafana-rs-demo" deleted from grafana-lab namespace
+
