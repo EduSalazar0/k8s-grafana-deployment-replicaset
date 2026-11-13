@@ -1,4 +1,4 @@
-# Grafana en Kubernetes con Deployment y ReplicaSet
+﻿# Grafana en Kubernetes con Deployment y ReplicaSet
 
 Tarea individual. Se despliega **Grafana** (plataforma de visualización y monitoreo) en un clúster local de **minikube**, aplicando los conceptos de **Deployment** y **ReplicaSet**, y se expone fuera del clúster con un **Service NodePort**.
 
@@ -25,11 +25,11 @@ Tarea individual. Se despliega **Grafana** (plataforma de visualización y monit
 │   ├── 04-grafana-service.yml       # Service NodePort 30300
 │   └── 05-replicaset-demo.yml       # ReplicaSet "solo", para comparar con el Deployment
 ├── evidencias/                      # Salidas reales de kubectl de cada prueba
-│   └── capturas/                    # Capturas de Grafana expuesto (login, dashboard, datasource)
+│   └── capturas/                    # Capturas de pantalla de cada paso (terminal y Grafana)
 └── Informe_Tarea_K8s_Grafana.docx   # Informe de la tarea
 ```
 
-![Dashboard de Grafana desplegado en Kubernetes](evidencias/capturas/grafana-dashboard.jpg)
+![Dashboard de Grafana desplegado en Kubernetes](evidencias/capturas/04-grafana-dashboard.png)
 
 ## Conceptos
 
