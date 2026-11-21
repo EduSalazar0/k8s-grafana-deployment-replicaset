@@ -7,7 +7,7 @@ metadata:
   name: webapp-gitops
   namespace: argocd
   finalizers:
-    - resources-finalizer.argocd.argoproj.io   # Al borrar la app se borran sus recursos
+    - resources-finalizer.argocd.argoproj.io/background   # Al borrar la app se borran sus recursos
 spec:
   project: default
   source:
