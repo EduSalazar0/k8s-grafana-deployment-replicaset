@@ -1,4 +1,221 @@
-﻿# Grafana en Kubernetes con Deployment y ReplicaSet
+# Kubernetes: Grafana con Deployment/ReplicaSet y GitOps con Argo CD
+
+Repositorio de los talleres de Kubernetes sobre un clúster local de **minikube** (perfil `taller`).
+
+| Taller | Contenido | Informe |
+|---|---|---|
+| **2. GitOps con Argo CD** | Aplicación web con Deployment, Service NodePort y HPA, desplegada y sincronizada automáticamente por Argo CD desde este repositorio | [PDF](Informe_Tarea_ArgoCD_GitOps.pdf) · [Word](Informe_Tarea_ArgoCD_GitOps.docx) |
+| **1. Grafana con Deployment y ReplicaSet** | Grafana con 3 réplicas, Service NodePort, autorreparación, escalado, rolling update y rollback | [PDF](Informe_Tarea_K8s_Grafana.pdf) · [Word](Informe_Tarea_K8s_Grafana.docx) |
+
+## Estructura del repositorio
+
+```
+.
+├── gitops/
+│   └── webapp/                      # Ruta que sincroniza Argo CD (fuente de verdad)
+│       ├── deployment.yml           # Deployment: 2 réplicas, requests/limits, puerto 80
+│       ├── service.yml              # Service NodePort 30080
+│       └── hpa.yml                  # HPA: 2 a 5 réplicas, objetivo CPU 50 %
+├── argocd/
+│   ├── application.yml              # Application de Argo CD con Automated Sync
+│   └── load-generator.yml           # Generador de carga para probar el HPA (fuera de GitOps)
+├── grafana/                         # Taller 1: manifiestos de Grafana
+│   ├── 00-namespace.yml ... 04-grafana-service.yml
+│   └── 05-replicaset-demo.yml
+├── pod_gnix/
+│   └── first_pod_nginx.yml          # Pod de nginx visto en clase (punto de partida)
+├── evidencias/
+│   ├── argocd/                      # Taller 2: salidas reales de kubectl de cada prueba
+│   ├── capturas/                    # Capturas de ambos talleres (01-11 taller 1, 12-33 taller 2)
+│   └── 01-*.txt ... 07-*.txt        # Taller 1: salidas reales de kubectl
+├── Informe_Tarea_ArgoCD_GitOps.docx / .pdf
+└── Informe_Tarea_K8s_Grafana.docx / .pdf
+```
+
+---
+
+# Taller 2: Despliegue de una aplicación con Argo CD y Kubernetes (GitOps)
+
+Se despliega una aplicación web (`nginxdemos/hello`, un nginx que muestra qué Pod atendió cada petición) usando **este repositorio como fuente de verdad**. Argo CD vigila la carpeta [`gitops/webapp`](gitops/webapp) de la rama `main` y sincroniza automáticamente el clúster con cada commit.
+
+![Árbol de recursos de la aplicación en Argo CD](evidencias/capturas/19-argocd-arbol-recursos.png)
+
+| Elemento | Valor |
+|---|---|
+| Clúster | minikube `taller` (driver Docker, Kubernetes v1.37.0) |
+| Argo CD | v3.6.2 (namespace `argocd`) |
+| Metrics Server | v0.9.0 (addon de minikube) |
+| Application | `webapp-gitops`, ruta `gitops/webapp`, rama `main`, Automated Sync (`prune` + `selfHeal`) |
+| Namespace de la app | `webapp-gitops` |
+| Deployment | `webapp`, 2 réplicas iniciales, requests `50m`/`32Mi`, limits `200m`/`64Mi`, puerto `80` |
+| Service | `webapp-svc`, NodePort `30080` (`port: 80` → `targetPort: http`) |
+| HPA | `webapp-hpa`, 2 a 5 réplicas, objetivo 50 % de CPU |
+
+## Flujo GitOps
+
+```
+Desarrollador ── git push ──▶ GitHub (rama main, gitops/webapp)
+                                     ▲
+                                     │ Argo CD consulta el repositorio (cada 3 min)
+Clúster ─ argocd: Application webapp-gitops ── compara Git vs clúster y sincroniza
+        └ webapp-gitops: Deployment ─▶ ReplicaSet ─▶ Pods (2-5) ◀─ HPA ◀─ Metrics Server
+                         Service NodePort 30080 ─▶ Pods con app=webapp
+```
+
+**Decisión de diseño (Argo CD + HPA):** el HPA cambia `spec.replicas` del Deployment (por ejemplo a 5), pero Git declara `replicas: 2`. Con `selfHeal`, Argo CD devolvería el Deployment a 2 réplicas y pelearía con el HPA. Por eso [`argocd/application.yml`](argocd/application.yml) declara `ignoreDifferences` sobre `/spec/replicas` y la opción `RespectIgnoreDifferences=true`: Git define las réplicas **iniciales** y después el HPA es el dueño de ese campo.
+
+## Cómo ejecutar el taller 2
+
+Requisitos: los mismos del taller 1 (Docker Desktop encendido, minikube, kubectl y Git), unos 3 GB de RAM libres y conexión a internet. Los comandos se ejecutan dentro de la carpeta del repositorio clonado:
+
+```bash
+git clone https://github.com/EduSalazar0/k8s-grafana-deployment-replicaset.git
+```
+
+```bash
+cd k8s-grafana-deployment-replicaset
+```
+
+### 1. Clúster y Metrics Server
+
+```bash
+minikube start -p taller --driver=docker
+```
+
+```bash
+minikube addons enable metrics-server -p taller
+```
+
+```bash
+kubectl top nodes
+```
+
+### 2. Instalar Argo CD
+
+```bash
+kubectl create namespace argocd
+```
+
+```bash
+kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+```bash
+kubectl -n argocd wait --for=condition=Ready pods --all --timeout=300s
+```
+
+`--server-side` es necesario porque el CRD de ApplicationSet es demasiado grande para el `kubectl apply` clásico.
+
+### 3. Crear la aplicación en Argo CD (una sola vez)
+
+```bash
+kubectl apply -f argocd/application.yml
+```
+
+```bash
+kubectl -n argocd get applications.argoproj.io
+```
+
+En 1–2 minutos debe aparecer `webapp-gitops   Synced   Healthy`. Al inicio puede verse `Degraded` unos segundos mientras el HPA recibe las primeras métricas.
+
+### 4. Abrir la consola de Argo CD
+
+Contraseña inicial del usuario `admin` (PowerShell):
+
+```powershell
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}")))
+```
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+Abrir `https://localhost:8080` (aceptar el certificado autofirmado) e ingresar con `admin`. La terminal del port-forward debe quedar abierta.
+
+### 5. Abrir la aplicación web
+
+```bash
+minikube service webapp-svc -n webapp-gitops -p taller
+```
+
+La página muestra el nombre del Pod que respondió; al recargar cambia entre réplicas. En Windows/macOS la terminal debe quedar abierta (túnel de minikube).
+
+### 6. Probar el HPA
+
+```bash
+kubectl apply -f argocd/load-generator.yml
+```
+
+```bash
+kubectl -n webapp-gitops get hpa webapp-hpa -w
+```
+
+Si no llega a 5 réplicas, aumentar la carga:
+
+```bash
+kubectl -n webapp-gitops scale deploy load-generator --replicas=8
+```
+
+Para retirar la carga (el HPA vuelve a 2 réplicas en 1–2 minutos):
+
+```bash
+kubectl delete -f argocd/load-generator.yml
+```
+
+### 7. Probar la sincronización automática
+
+Cambiar algo en `gitops/webapp` (por ejemplo la versión de la imagen en `deployment.yml`), hacer commit y push a `main`. Sin tocar el clúster, en un máximo de 3 minutos Argo CD aplica el cambio:
+
+```bash
+kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+```
+
+```bash
+kubectl -n webapp-gitops get rs -o wide
+```
+
+### 8. Probar el self-heal
+
+Un cambio manual se revierte solo en segundos:
+
+```bash
+kubectl -n webapp-gitops delete svc webapp-svc
+```
+
+```bash
+kubectl -n webapp-gitops get svc webapp-svc
+```
+
+## Pruebas realizadas (taller 2)
+
+Las salidas completas están en [`evidencias/argocd/`](evidencias/argocd/) y las capturas en [`evidencias/capturas/`](evidencias/capturas/) (12 a 33).
+
+| # | Prueba | Resultado | Evidencia |
+|---|---|---|---|
+| 1 | Metrics Server | `kubectl top` devuelve CPU y memoria | [12](evidencias/argocd/12-metrics-server.txt) |
+| 2 | Instalación de Argo CD | 7 Pods `Running`, v3.6.2 | [13](evidencias/argocd/13-argocd-instalacion.txt) |
+| 3 | Application con Automated Sync | `Synced`/`Healthy` en el commit `5d5458a`, sin `kubectl apply` de los manifiestos | [14](evidencias/argocd/14-argocd-application.txt), capturas 17–21 |
+| 4 | Recursos y etiquetas | Deployment 2/2, Service `80:30080`, HPA `2%/50%`, EndpointSlice con las 2 IPs | [15](evidencias/argocd/15-recursos-webapp.txt) |
+| 5 | Acceso | HTTP 200 y balanceo entre los 2 Pods | [16](evidencias/argocd/16-acceso-webapp.txt), captura 22 |
+| 6 | HPA escala | CPU 70 % → 2 → 3 → 4 → 5 réplicas | [23](evidencias/argocd/23-hpa-generador-carga.txt), [24](evidencias/argocd/24-hpa-escalado-maximo.txt) |
+| 7 | HPA y Argo CD conviven | 5 réplicas en el clúster, 2 en Git, app `Synced` | [25](evidencias/argocd/25-hpa-5-replicas-argocd-synced.txt), captura 26 |
+| 8 | HPA reduce | Sin carga vuelve a 2 réplicas | [27](evidencias/argocd/27-hpa-reduccion.txt) |
+| 9 | Cambio en Git | Commit `7b3d371` (imagen 0.3 → 0.4) detectado y sincronizado solo en 2 min 23 s | [28](evidencias/argocd/28-gitops-commit-push.txt), [29](evidencias/argocd/29-gitops-sync-automatico.txt), capturas 30–32 |
+| 10 | Self-heal | Service borrado e imagen cambiada a mano: Argo CD lo revierte en ~1 s | [33](evidencias/argocd/33-argocd-self-heal.txt) |
+
+## Limpieza del taller 2
+
+```bash
+kubectl delete -f argocd/application.yml
+```
+
+```bash
+kubectl delete namespace argocd
+```
+
+---
+
+# Taller 1: Grafana en Kubernetes con Deployment y ReplicaSet
 
 Tarea individual. Se despliega **Grafana** (plataforma de visualización y monitoreo) en un clúster local de **minikube**, aplicando los conceptos de **Deployment** y **ReplicaSet**, y se expone fuera del clúster con un **Service NodePort**.
 
@@ -11,26 +228,7 @@ Tarea individual. Se despliega **Grafana** (plataforma de visualización y monit
 | Exposición | Service `grafana-svc`, NodePort `30300` |
 | Credenciales de laboratorio | usuario `admin` / clave definida en [`01-grafana-secret.yml`](grafana/01-grafana-secret.yml) |
 
-## Estructura del repositorio
-
-```
-.
-├── pod_gnix/
-│   └── first_pod_nginx.yml          # Pod de nginx visto en clase (punto de partida)
-├── grafana/
-│   ├── 00-namespace.yml             # Namespace grafana-lab
-│   ├── 01-grafana-secret.yml        # Usuario y clave admin (Secret)
-│   ├── 02-grafana-configmap.yml     # Datasource + dashboard provisionados (ConfigMap)
-│   ├── 03-grafana-deployment.yml    # Deployment con 3 réplicas y RollingUpdate
-│   ├── 04-grafana-service.yml       # Service NodePort 30300
-│   └── 05-replicaset-demo.yml       # ReplicaSet "solo", para comparar con el Deployment
-├── evidencias/                      # Salidas reales de kubectl de cada prueba
-│   └── capturas/                    # Capturas de pantalla de cada paso (terminal y Grafana)
-├── Informe_Tarea_K8s_Grafana.docx   # Informe técnico (Word)
-└── Informe_Tarea_K8s_Grafana.pdf    # Informe técnico (PDF)
-```
-
-El informe técnico completo, con capturas y análisis de cada paso, está en [Informe_Tarea_K8s_Grafana.pdf](Informe_Tarea_K8s_Grafana.pdf).
+El informe técnico del taller 1, con capturas y análisis de cada paso, está en [Informe_Tarea_K8s_Grafana.pdf](Informe_Tarea_K8s_Grafana.pdf).
 
 ![Dashboard de Grafana desplegado en Kubernetes](evidencias/capturas/04-grafana-dashboard.png)
 
@@ -67,7 +265,7 @@ Service NodePort (grafana-svc :30300) → balancea entre los Pods con app=grafan
 - **Probes:** `readinessProbe` (solo recibe tráfico cuando está listo) y `livenessProbe` (se reinicia si se cuelga), ambas contra `/api/health`.
 - **Service NodePort:** expone Grafana en el puerto `30300` del nodo y reparte el tráfico entre las réplicas. Usa `sessionAffinity: ClientIP` porque cada réplica guarda su propia sesión de login.
 
-## Cómo ejecutar el proyecto
+## Cómo ejecutar el taller 1
 
 ### 1. Requisitos
 
@@ -225,7 +423,7 @@ kubectl delete -f grafana/05-replicaset-demo.yml
 | `http://192.168.49.2:30300` no abre en Windows/macOS | Con el driver Docker el nodo no es accesible directamente; usar `minikube service ...` y dejar la terminal abierta. |
 | Grafana pide iniciar sesión otra vez después de un rollout | Es esperado: cada réplica guarda su sesión localmente y los Pods nuevos no la conocen. |
 
-## Pruebas realizadas
+## Pruebas realizadas (taller 1)
 
 Las salidas completas están en [`evidencias/`](evidencias/).
 
@@ -257,7 +455,7 @@ Las salidas completas están en [`evidencias/`](evidencias/).
 
 **Limitación y cómo se resuelve en producción:** en este laboratorio cada réplica guarda sus datos en un `emptyDir` (SQLite local), por eso los cambios hechos desde la interfaz no se comparten entre réplicas ni sobreviven a un reinicio. En producción se conecta Grafana a una base de datos externa (PostgreSQL o MySQL) con `GF_DATABASE_*`, y los dashboards se mantienen como código en ConfigMaps, como se hizo aquí.
 
-## Limpieza
+## Limpieza del taller 1
 
 ```bash
 kubectl delete namespace grafana-lab
