@@ -1,0 +1,34 @@
+# Application de Argo CD: une el repositorio Git (fuente de verdad) con el clúster.
+# Se aplica una sola vez:  kubectl apply -f argocd/application.yml
+# A partir de ahí, cualquier commit en gitops/webapp se despliega solo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: webapp-gitops
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # Al borrar la app se borran sus recursos
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/EduSalazar0/k8s-grafana-deployment-replicaset.git
+    targetRevision: main
+    path: gitops/webapp                         # Carpeta con deployment.yml, service.yml y hpa.yml
+  destination:
+    server: https://kubernetes.default.svc      # El mismo clúster donde corre Argo CD
+    namespace: webapp-gitops
+  syncPolicy:
+    automated:                                  # Automated Sync
+      prune: true                               # Borra del clúster lo que se quite de Git
+      selfHeal: true                            # Revierte cambios manuales hechos con kubectl
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  # El HPA cambia spec.replicas del Deployment. Sin esto, Argo CD vería el
+  # Deployment "OutOfSync" y lo devolvería a 2 réplicas, peleando con el HPA.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: webapp
+      jsonPointers:
+        - /spec/replicas

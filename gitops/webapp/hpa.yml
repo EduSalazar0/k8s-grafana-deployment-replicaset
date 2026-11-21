@@ -1,0 +1,29 @@
+# Horizontal Pod Autoscaler: ajusta las réplicas del Deployment "webapp"
+# según el uso de CPU que reporta Metrics Server.
+#   uso % = consumo real de CPU / requests.cpu (50m en deployment.yml)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webapp-hpa
+  namespace: webapp-gitops
+  labels:
+    app: webapp
+    app.kubernetes.io/part-of: tarea-argocd
+spec:
+  scaleTargetRef:           # Deployment que se escala
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webapp
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50   # Objetivo: 50 % de la CPU solicitada
+  behavior:
+    scaleDown:
+      # Por defecto espera 300 s antes de reducir; 60 s acelera la demostración
+      stabilizationWindowSeconds: 60

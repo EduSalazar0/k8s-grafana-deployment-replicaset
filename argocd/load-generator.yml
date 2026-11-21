@@ -1,0 +1,33 @@
+# Generador de carga para probar el HPA (NO forma parte de la app de Argo CD).
+# Uso:    kubectl apply -f argocd/load-generator.yml
+# Parar:  kubectl delete -f argocd/load-generator.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: webapp-gitops
+  labels:
+    app: load-generator
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: busybox
+          image: busybox:1.37
+          command: ["/bin/sh", "-c"]
+          args:
+            - while true; do wget -q -O /dev/null http://webapp-svc.webapp-gitops.svc.cluster.local; done
+          resources:
+            requests:
+              cpu: 50m
+              memory: 16Mi
+            limits:
+              cpu: 300m
+              memory: 32Mi

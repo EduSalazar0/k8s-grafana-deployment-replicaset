@@ -1,0 +1,58 @@
+# Deployment de la aplicación web (nginx "hello").
+# Este archivo NO se aplica a mano: Argo CD lo lee desde GitHub (rama main,
+# carpeta gitops/webapp) y lo sincroniza con el clúster de forma automática.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: webapp-gitops
+  labels:
+    app: webapp
+    app.kubernetes.io/name: webapp
+    app.kubernetes.io/part-of: tarea-argocd
+    app.kubernetes.io/managed-by: argocd
+spec:
+  # Réplicas iniciales. Luego el HPA (hpa.yml) ajusta este valor entre 2 y 5;
+  # por eso la Application de Argo CD ignora las diferencias en /spec/replicas.
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: webapp                 # Debe coincidir con las etiquetas del Pod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0           # Actualizaciones sin caída
+  template:
+    metadata:
+      labels:
+        app: webapp               # El Service y el ReplicaSet usan esta etiqueta
+        tier: frontend
+    spec:
+      containers:
+        - name: webapp
+          image: nginxdemos/hello:0.3   # nginx que muestra el Pod que atiende cada petición
+          ports:
+            - name: http
+              containerPort: 80   # Puerto expuesto por la aplicación
+              protocol: TCP
+          resources:
+            requests:             # Reserva mínima; el HPA calcula el % sobre este valor
+              cpu: 50m
+              memory: 32Mi
+            limits:               # Tope máximo que puede consumir cada Pod
+              cpu: 200m
+              memory: 64Mi
+          readinessProbe:         # Solo recibe tráfico cuando responde
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:          # Se reinicia si deja de responder
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
