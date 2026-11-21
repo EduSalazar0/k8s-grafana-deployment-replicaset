@@ -1,0 +1,19 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> minikube addons enable metrics-server -p taller
+* metrics-server is an addon maintained by Kubernetes. For any concerns contact minikube on GitHub.
+You can view the list of minikube maintainers at: https://github.com/kubernetes/minikube/blob/master/OWNERS
+  - Using image registry.k8s.io/metrics-server/metrics-server:v0.9.0
+* The 'metrics-server' addon is enabled
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n kube-system get deploy metrics-server
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+metrics-server   1/1     1            1           2m12s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl top nodes
+NAME     CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+taller   1807m        12%      1925Mi          25%         
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl top pods -n argocd
+NAME                                                CPU(cores)   MEMORY(bytes)   
+argocd-application-controller-0                     31m          23Mi            
+argocd-applicationset-controller-76c9bbbc9f-rcfr2   29m          24Mi            
+argocd-dex-server-c5c68fc58-gdjpn                   63m          104Mi           
+argocd-notifications-controller-67bf66d585-86nlv    25m          21Mi            
+argocd-server-7c54fc4fd9-j89f2                      72m          42Mi            
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

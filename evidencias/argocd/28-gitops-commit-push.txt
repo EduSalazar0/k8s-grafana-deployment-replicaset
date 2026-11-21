@@ -1,0 +1,27 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git diff gitops/webapp/deployment.yml
+diff --git a/gitops/webapp/deployment.yml b/gitops/webapp/deployment.yml
+index 96e0097..9d92844 100644
+--- a/gitops/webapp/deployment.yml
++++ b/gitops/webapp/deployment.yml
+@@ -32,7 +32,7 @@ spec:
+     spec:
+       containers:
+         - name: webapp
+-          image: nginxdemos/hello:0.3   # nginx que muestra el Pod que atiende cada petición
++          image: nginxdemos/hello:0.4   # nginx que muestra el Pod que atiende cada petición
+           ports:
+             - name: http
+               containerPort: 80   # Puerto expuesto por la aplicación
+warning: in the working copy of 'gitops/webapp/deployment.yml', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git add gitops/webapp/deployment.yml
+warning: in the working copy of 'gitops/webapp/deployment.yml', LF will be replaced by CRLF the next time Git touches it
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git commit -m 'Actualiza la aplicacion web a nginxdemos/hello:0.4'
+[main 7b3d371] Actualiza la aplicacion web a nginxdemos/hello:0.4
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git push origin main
+To https://github.com/EduSalazar0/k8s-grafana-deployment-replicaset.git
+   5d5458a..7b3d371  main -> main
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+NAME            SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+webapp-gitops   Synced        Healthy         5d5458a0f3ab23e99c9ac35615c1690ab16b5028   default
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

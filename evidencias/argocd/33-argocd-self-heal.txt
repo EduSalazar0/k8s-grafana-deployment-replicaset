@@ -1,0 +1,21 @@
+# Cambio manual (drift): se borra el Service y se cambia la imagen sin pasar por Git
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops delete svc webapp-svc
+service "webapp-svc" deleted from webapp-gitops namespace
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops set image deploy/webapp webapp=nginxdemos/hello:0.3
+deployment.apps/webapp image updated
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get svc webapp-svc
+NAME         TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+webapp-svc   NodePort   10.103.129.240   <none>        80:30080/TCP   29s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy webapp -o jsonpath='Imagen actual: {.spec.template.spec.containers[0].image}'
+Imagen actual: nginxdemos/hello:0.4
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+NAME            SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+webapp-gitops   Synced        Healthy         7b3d3713d0f1ac9b4321a369630985db06f7ea7a   default
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get events --field-selector involvedObject.name=webapp-gitops --sort-by=.lastTimestamp | Select-Object -Last 6
+35s         Normal   OperationStarted     application/webapp-gitops   Initiated automated sync to '7b3d3713d0f1ac9b4321a369630985db06f7ea7a'
+35s         Normal   ResourceUpdated      application/webapp-gitops   Updated sync status: Synced -> OutOfSync
+35s         Normal   ResourceUpdated      application/webapp-gitops   Updated health status: Healthy -> Progressing (Caused by apps/Deployment:webapp-gitops/webapp)
+34s         Normal   OperationCompleted   application/webapp-gitops   Partial sync operation to 7b3d3713d0f1ac9b4321a369630985db06f7ea7a succeeded
+34s         Normal   ResourceUpdated      application/webapp-gitops   Updated sync status: OutOfSync -> Synced
+33s         Normal   ResourceUpdated      application/webapp-gitops   Updated health status: Progressing -> Healthy
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

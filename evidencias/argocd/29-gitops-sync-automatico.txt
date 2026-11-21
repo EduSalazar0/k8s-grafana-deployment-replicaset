@@ -1,0 +1,18 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git log --oneline -3
+7b3d371 Actualiza la aplicacion web a nginxdemos/hello:0.4
+5d5458a Manifiestos GitOps de la aplicacion web: Deployment, Service NodePort y HPA
+0d7c7e8 README con guia de ejecucion completa, portada del informe y version PDF
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+NAME            SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+webapp-gitops   Synced        Healthy         7b3d3713d0f1ac9b4321a369630985db06f7ea7a   default
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o jsonpath='Sync automatico: {.status.operationState.startedAt}  inicio: {.status.operationState.operation.initiatedBy}  resultado: {.status.operationState.message}'
+Sync automatico: 2026-11-21T20:35:25Z  inicio: {"automated":true}  resultado: successfully synced (all tasks run)
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get rs -o wide
+NAME                DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES                 SELECTOR
+webapp-6895c8c5fb   0         0         0       18m   webapp       nginxdemos/hello:0.3   app=webapp,pod-template-hash=6895c8c5fb
+webapp-86db9cf66f   2         2         2       28s   webapp       nginxdemos/hello:0.4   app=webapp,pod-template-hash=86db9cf66f
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get pods -l app=webapp -o custom-columns=POD:.metadata.name,IMAGEN:.spec.containers[0].image,ESTADO:.status.phase
+POD                       IMAGEN                 ESTADO
+webapp-86db9cf66f-6qbcj   nginxdemos/hello:0.4   Running
+webapp-86db9cf66f-mmbhx   nginxdemos/hello:0.4   Running
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

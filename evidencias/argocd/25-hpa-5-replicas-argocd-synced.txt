@@ -1,0 +1,15 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa,deploy -l app=webapp
+NAME                                             REFERENCE           TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/webapp-hpa   Deployment/webapp   cpu: 65%/50%   2         5         5          11m
+
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/webapp   5/5     5            5           11m
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy webapp -o jsonpath='spec.replicas en el cluster: {.spec.replicas}'
+spec.replicas en el cluster: 5
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git show HEAD:gitops/webapp/deployment.yml | Select-String 'replicas: '
+
+  replicas: 2
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops
+NAME            SYNC STATUS   HEALTH STATUS
+webapp-gitops   Synced        Healthy
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

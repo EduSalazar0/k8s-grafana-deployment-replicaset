@@ -1,0 +1,31 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops scale deploy load-generator --replicas=8
+deployment.apps/load-generator scaled
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa webapp-hpa
+NAME         REFERENCE           TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+webapp-hpa   Deployment/webapp   cpu: 65%/50%   2         5         4          10m
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy webapp
+NAME     READY   UP-TO-DATE   AVAILABLE   AGE
+webapp   4/5     5            4           10m
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get pods -l app=webapp -o wide
+NAME                      READY   STATUS    RESTARTS   AGE     IP            NODE     NOMINATED NODE   READINESS GATES
+webapp-6895c8c5fb-9n7xw   1/1     Running   0          2m13s   10.244.0.25   taller   <none>           <none>
+webapp-6895c8c5fb-bsqvq   1/1     Running   0          3m14s   10.244.0.24   taller   <none>           <none>
+webapp-6895c8c5fb-dz82n   0/1     Running   0          12s     10.244.0.31   taller   <none>           <none>
+webapp-6895c8c5fb-rf627   1/1     Running   0          10m     10.244.0.20   taller   <none>           <none>
+webapp-6895c8c5fb-wrwf6   1/1     Running   0          10m     10.244.0.19   taller   <none>           <none>
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops top pods -l app=webapp
+NAME                      CPU(cores)   MEMORY(bytes)   
+webapp-6895c8c5fb-9n7xw   35m          12Mi            
+webapp-6895c8c5fb-bsqvq   31m          11Mi            
+webapp-6895c8c5fb-rf627   32m          12Mi            
+webapp-6895c8c5fb-wrwf6   32m          12Mi            
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get events --field-selector involvedObject.name=webapp-hpa --sort-by=.lastTimestamp
+LAST SEEN   TYPE      REASON                         OBJECT                               MESSAGE
+10m         Warning   FailedGetResourceMetric        horizontalpodautoscaler/webapp-hpa   failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+10m         Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/webapp-hpa   invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+9m33s       Warning   FailedGetResourceMetric        horizontalpodautoscaler/webapp-hpa   failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+9m33s       Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/webapp-hpa   invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+3m17s       Normal    SuccessfulRescale              horizontalpodautoscaler/webapp-hpa   New size: 3; reason: cpu resource utilization (percentage of request) above target
+2m15s       Normal    SuccessfulRescale              horizontalpodautoscaler/webapp-hpa   New size: 4; reason: cpu resource utilization (percentage of request) above target
+15s         Normal    SuccessfulRescale              horizontalpodautoscaler/webapp-hpa   New size: 5; reason: cpu resource utilization (percentage of request) above target
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

@@ -1,0 +1,26 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl create namespace argocd --dry-run=client -o name
+namespace/argocd
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml | Select-String 'customresourcedefinition|deployment|statefulset'
+
+customresourcedefinition.apiextensions.k8s.io/applications.argoproj.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/applicationsets.argoproj.io serverside-applied
+customresourcedefinition.apiextensions.k8s.io/appprojects.argoproj.io serverside-applied
+deployment.apps/argocd-applicationset-controller serverside-applied
+deployment.apps/argocd-dex-server serverside-applied
+deployment.apps/argocd-notifications-controller serverside-applied
+deployment.apps/argocd-redis serverside-applied
+deployment.apps/argocd-repo-server serverside-applied
+deployment.apps/argocd-server serverside-applied
+statefulset.apps/argocd-application-controller serverside-applied
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get pods
+NAME                                                READY   STATUS    RESTARTS   AGE
+argocd-application-controller-0                     1/1     Running   0          2m20s
+argocd-applicationset-controller-76c9bbbc9f-rcfr2   1/1     Running   0          2m23s
+argocd-dex-server-c5c68fc58-gdjpn                   1/1     Running   0          2m23s
+argocd-notifications-controller-67bf66d585-86nlv    1/1     Running   0          2m23s
+argocd-redis-665bf4467d-xzkk9                       1/1     Running   0          2m23s
+argocd-repo-server-7fb4dfb7fb-dzp5c                 1/1     Running   0          2m22s
+argocd-server-7c54fc4fd9-j89f2                      1/1     Running   0          2m21s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get deploy argocd-server -o jsonpath='{.spec.template.spec.containers[0].image}'
+quay.io/argoproj/argocd:v3.6.2
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

@@ -1,0 +1,23 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy load-generator
+Error from server (NotFound): deployments.apps "load-generator" not found
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops top pods
+NAME                      CPU(cores)   MEMORY(bytes)   
+webapp-6895c8c5fb-rf627   1m           11Mi            
+webapp-6895c8c5fb-wrwf6   1m           11Mi            
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa webapp-hpa
+NAME         REFERENCE           TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+webapp-hpa   Deployment/webapp   cpu: 2%/50%   2         5         2          14m
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy,pods -l app=webapp
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/webapp   2/2     2            2           14m
+
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/webapp-6895c8c5fb-rf627   1/1     Running   0          14m
+pod/webapp-6895c8c5fb-wrwf6   1/1     Running   0          14m
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get events --field-selector involvedObject.name=webapp-hpa,reason=SuccessfulRescale --sort-by=.lastTimestamp
+LAST SEEN   TYPE     REASON              OBJECT                               MESSAGE
+7m20s       Normal   SuccessfulRescale   horizontalpodautoscaler/webapp-hpa   New size: 3; reason: cpu resource utilization (percentage of request) above target
+6m18s       Normal   SuccessfulRescale   horizontalpodautoscaler/webapp-hpa   New size: 4; reason: cpu resource utilization (percentage of request) above target
+4m18s       Normal   SuccessfulRescale   horizontalpodautoscaler/webapp-hpa   New size: 5; reason: cpu resource utilization (percentage of request) above target
+30s         Normal   SuccessfulRescale   horizontalpodautoscaler/webapp-hpa   New size: 2; reason: All metrics below target
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

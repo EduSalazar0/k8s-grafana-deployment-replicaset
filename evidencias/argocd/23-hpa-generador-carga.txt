@@ -1,0 +1,19 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa webapp-hpa
+NAME         REFERENCE           TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+webapp-hpa   Deployment/webapp   cpu: 2%/50%   2         5         2          6m41s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl apply -f argocd/load-generator.yml
+deployment.apps/load-generator created
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops top pods
+NAME                              CPU(cores)   MEMORY(bytes)   
+load-generator-56d6f7b46c-8ckrg   169m         1Mi             
+load-generator-56d6f7b46c-phrt8   173m         2Mi             
+load-generator-56d6f7b46c-zx2c5   169m         2Mi             
+webapp-6895c8c5fb-rf627           37m          12Mi            
+webapp-6895c8c5fb-wrwf6           33m          13Mi            
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa webapp-hpa
+NAME         REFERENCE           TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+webapp-hpa   Deployment/webapp   cpu: 70%/50%   2         5         2          7m45s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get hpa webapp-hpa
+NAME         REFERENCE           TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+webapp-hpa   Deployment/webapp   cpu: 70%/50%   2         5         3          8m31s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

@@ -1,0 +1,26 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy,rs,pods,svc,hpa -o wide
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                 SELECTOR
+deployment.apps/webapp   2/2     2            2           2m26s   webapp       nginxdemos/hello:0.3   app=webapp
+
+NAME                                DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES                 SELECTOR
+replicaset.apps/webapp-6895c8c5fb   2         2         2       2m26s   webapp       nginxdemos/hello:0.3   app=webapp,pod-template-hash=6895c8c5fb
+
+NAME                          READY   STATUS    RESTARTS   AGE     IP            NODE     NOMINATED NODE   READINESS GATES
+pod/webapp-6895c8c5fb-rf627   1/1     Running   0          2m26s   10.244.0.20   taller   <none>           <none>
+pod/webapp-6895c8c5fb-wrwf6   1/1     Running   0          2m27s   10.244.0.19   taller   <none>           <none>
+
+NAME                 TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+service/webapp-svc   NodePort   10.101.237.248   <none>        80:30080/TCP   2m27s   app=webapp
+
+NAME                                             REFERENCE           TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/webapp-hpa   Deployment/webapp   cpu: 2%/50%   2         5         2          2m27s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get deploy webapp -o jsonpath='selector: {.spec.selector.matchLabels}  requests: {.spec.template.spec.containers[0].resources.requests}  limits: {.spec.template.spec.containers[0].resources.limits}'
+selector: {"app":"webapp"}  requests: {"cpu":"50m","memory":"32Mi"}  limits: {"cpu":"200m","memory":"64Mi"}
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get endpointslices -l kubernetes.io/service-name=webapp-svc
+NAME               ADDRESSTYPE   PORTS   ENDPOINTS                 AGE
+webapp-svc-2xd56   IPv4          80      10.244.0.19,10.244.0.20   2m29s
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n webapp-gitops get pods --show-labels
+NAME                      READY   STATUS    RESTARTS   AGE     LABELS
+webapp-6895c8c5fb-rf627   1/1     Running   0          2m29s   app=webapp,pod-template-hash=6895c8c5fb,tier=frontend
+webapp-6895c8c5fb-wrwf6   1/1     Running   0          2m30s   app=webapp,pod-template-hash=6895c8c5fb,tier=frontend
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

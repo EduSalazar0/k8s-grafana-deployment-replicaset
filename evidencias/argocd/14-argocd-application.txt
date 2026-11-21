@@ -1,0 +1,20 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> git log --oneline -1
+5d5458a Manifiestos GitOps de la aplicacion web: Deployment, Service NodePort y HPA
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl apply -f argocd/application.yml
+application.argoproj.io/webapp-gitops created
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+NAME            SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+webapp-gitops   Synced        Degraded        5d5458a0f3ab23e99c9ac35615c1690ab16b5028   default
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o wide
+NAME            SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+webapp-gitops   Synced        Healthy         5d5458a0f3ab23e99c9ac35615c1690ab16b5028   default
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> kubectl -n argocd get applications.argoproj.io webapp-gitops -o jsonpath='repoURL: {.spec.source.repoURL}  path: {.spec.source.path}  automated: {.spec.syncPolicy.automated}'
+repoURL: https://github.com/EduSalazar0/k8s-grafana-deployment-replicaset.git  path: gitops/webapp  automated: {"prune":true,"selfHeal":true}
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> (kubectl -n argocd get applications.argoproj.io webapp-gitops -o json | ConvertFrom-Json).status.resources | Format-Table kind,name,namespace,status,@{n='health';e={$_.health.status}} -AutoSize
+
+kind                    name       namespace     status health
+----                    ----       ---------     ------ ------
+Service                 webapp-svc webapp-gitops Synced       
+Deployment              webapp     webapp-gitops Synced       
+HorizontalPodAutoscaler webapp-hpa webapp-gitops Synced       
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 

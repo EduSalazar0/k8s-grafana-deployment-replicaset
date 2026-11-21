@@ -1,0 +1,19 @@
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> minikube service list -n webapp-gitops -p taller
+┌───────────────┬────────────┬─────────────┬─────┐
+│   NAMESPACE   │    NAME    │ TARGET PORT │ URL │
+├───────────────┼────────────┼─────────────┼─────┤
+│ webapp-gitops │ webapp-svc │ http/80     │     │
+└───────────────┴────────────┴─────────────┴─────┘
+# Terminal 2 (queda abierta): minikube service webapp-svc -n webapp-gitops -p taller --url  ->  http://127.0.0.1:55661
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> curl.exe -s -I http://127.0.0.1:55661 | Select-Object -First 3
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Date: Sat, 21 Nov 2026 20:21:08 GMT
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 1..6 | ForEach-Object { 'Peticion ' + $_ + ' atendida por: ' + ([regex]::Match((curl.exe -s http://127.0.0.1:55661), 'webapp-[a-z0-9]+-[a-z0-9]+').Value) }
+Peticion 1 atendida por: webapp-6895c8c5fb-rf627
+Peticion 2 atendida por: webapp-6895c8c5fb-wrwf6
+Peticion 3 atendida por: webapp-6895c8c5fb-wrwf6
+Peticion 4 atendida por: webapp-6895c8c5fb-wrwf6
+Peticion 5 atendida por: webapp-6895c8c5fb-rf627
+Peticion 6 atendida por: webapp-6895c8c5fb-rf627
+PS C:\Users\EduardoSalazar\Proyectos\Kubernetes> 
