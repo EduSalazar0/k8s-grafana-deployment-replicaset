@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: webapp
-          image: nginxdemos/hello:0.3   # nginx que muestra el Pod que atiende cada petición
+          image: nginxdemos/hello:0.4   # nginx que muestra el Pod que atiende cada petición
           ports:
             - name: http
               containerPort: 80   # Puerto expuesto por la aplicación
